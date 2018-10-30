@@ -189,5 +189,71 @@ class TestStopwords(unittest.TestCase):
         self.assertEqual(output, expect)
 
 
+class TestPhraseOccurrences(unittest.TestCase):
+    @staticmethod
+    def __run(n, *files):
+        tempfiles = []
+        for file in files:
+            tempfile = NamedTemporaryFile('w', delete=False, encoding='utf8')
+            tempfile.write(file)
+            tempfile.flush()
+            tempfiles.append(tempfile)
+        output = ''.join(main(['-p', str(n)] + [tempfile.name for tempfile in tempfiles]))
+        for tempfile in tempfiles:
+            output = output.replace(tempfile.name, '#')
+            tempfile.close()
+        return output
+
+    @staticmethod
+    def __format(data):
+        return 'File: #\n' + ''.join('%40s\t%d\n' % i for i in data) + '\n'
+
+    def test_1_file(self):
+        for i in ('', 'a'):
+            with self.subTest(i=i):
+                output = self.__run(1, i)
+                expect = self.__format([(i, 1)] if i else [])
+                self.assertEqual(output, expect)
+
+    def test_2_files(self):
+        for i in ('', 'a', 'b'):
+            for j in ('', 'a', 'b'):
+                with self.subTest(i=i, j=j):
+                    output = self.__run(1, i, j)
+                    expect = self.__format([(i, 1)] if i else []) + self.__format([(j, 1)] if j else [])
+                    self.assertEqual(output, expect)
+
+    def test_function(self):
+        output = self.__run(1, '12ab@ * ajfd9ii a7j00* acx 12 acx')
+        expect = self.__format([('acx', 2), ('a7j00', 1), ('ajfd9ii', 1)])
+        self.assertEqual(output, expect)
+
+    def test_phrase(self):
+        output = self.__run(2, '')
+        expect = self.__format([])
+        self.assertEqual(output, expect)
+        output = self.__run(2, 'a')
+        expect = self.__format([])
+        self.assertEqual(output, expect)
+        output = self.__run(2, 'a b')
+        expect = self.__format([('a b', 1)])
+        self.assertEqual(output, expect)
+        output = self.__run(2, 'a, b')
+        expect = self.__format([])
+        self.assertEqual(output, expect)
+        output = self.__run(2, 'a b, a')
+        expect = self.__format([('a b', 1)])
+        self.assertEqual(output, expect)
+        output = self.__run(2, 'a, b a b')
+        expect = self.__format([('a b', 1), ('b a', 1)])
+        self.assertEqual(output, expect)
+        output = self.__run(3, 'a, b a b')
+        expect = self.__format([('b a b', 1)])
+        self.assertEqual(output, expect)
+        output = self.__run(3, 'a b a b a')
+        expect = self.__format([('a b a', 2), ('b a b', 1)])
+        self.assertEqual(output, expect)
+
+
 if __name__ == '__main__':
     unittest.main()

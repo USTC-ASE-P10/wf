@@ -31,12 +31,10 @@ def word(path, limit, stopwords):
     """
     counts = defaultdict(lambda: 0)
     with open(path, encoding='utf8') as f:
-        pattern = re.compile(r'[a-zA-Z0-9]+')
+        pattern = re.compile(r'(?<![a-zA-Z0-9])[a-zA-Z][a-zA-Z0-9]*')
         s = f.read()
         result = pattern.findall(s)
         for w in result:
-            if w[0].isdigit():
-                continue
             w = w.lower()
             counts[w] += 1
     if stopwords is not None:
@@ -52,6 +50,25 @@ def word(path, limit, stopwords):
     yield '\n'
 
 
+def phrase(path, n):
+    counts = defaultdict(lambda: 0)
+    with open(path, encoding='utf8') as f:
+        pattern = re.compile(r'[a-zA-Z0-9\s]+')
+        word_p = re.compile(r'(?<![a-zA-Z0-9])[a-zA-Z][a-zA-Z0-9]*')
+        s = f.read()
+        for sen in pattern.findall(s):
+            words = []
+            for w in word_p.findall(sen):
+                words.append(w)
+            for i in range(len(words) - n + 1):
+                counts[tuple(words[i:i + n])] += 1
+    yield 'File: %s\n' % path
+    result = sorted(counts.items(), key=lambda x: (-x[1], x[0]))
+    for (k, v) in result:
+        yield '%40s\t%d\n' % (' '.join(k), v)
+    yield '\n'
+
+
 def main(args):
     parser = argparse.ArgumentParser()
     parser.add_argument('paths', metavar='<path>', nargs='+', help='file to process')
@@ -59,6 +76,7 @@ def main(args):
     parser.add_argument('-f', dest='function', action='store_const', const='word', help='count word occurrences')
     parser.add_argument('-d', dest='function', action='store_const', const='dir_word',
                         help='count word occurrences in specified directory')
+    parser.add_argument('-p', dest='function', metavar='N', type=int, help='count phrase (with N words) occurrences')
     parser.add_argument('-s', dest='recursive', action='store_const', const=True, default=False, help='recursive')
     parser.add_argument('-n', dest='limit', metavar='N', type=int, help='output top N lines')
     parser.add_argument('-x', dest='stopwords', metavar='<path>', help='stopwords file')
@@ -83,6 +101,9 @@ def main(args):
                 for (p, _, l) in os.walk(path):
                     for i in l:
                         yield from word(os.path.join(p, i), args.limit, args.stopwords)
+    else:
+        for path in args.paths:
+            yield from phrase(path, args.function)
 
 
 if __name__ == '__main__':
