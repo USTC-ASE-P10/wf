@@ -59,7 +59,7 @@ def phrase(path, n):
         for sen in pattern.findall(s):
             words = []
             for w in word_p.findall(sen):
-                words.append(w)
+                words.append(w.lower())
             for i in range(len(words) - n + 1):
                 counts[tuple(words[i:i + n])] += 1
     yield 'File: %s\n' % path
