@@ -36,7 +36,7 @@ def word(path, limit, stopwords):
         result = pattern.findall(s)
         for w in result:
             w = w.lower()
-            counts[w] += 1
+            counts[verbs.get(w, w)] += 1
     if stopwords is not None:
         with open(stopwords, encoding='utf-8') as f:
             for line in f:
@@ -59,7 +59,8 @@ def phrase(path, n):
         for sen in pattern.findall(s):
             words = []
             for w in word_p.findall(sen):
-                words.append(w.lower())
+                w = w.lower()
+                words.append(verbs.get(w, w))
             for i in range(len(words) - n + 1):
                 counts[tuple(words[i:i + n])] += 1
     yield 'File: %s\n' % path
@@ -80,7 +81,18 @@ def main(args):
     parser.add_argument('-s', dest='recursive', action='store_const', const=True, default=False, help='recursive')
     parser.add_argument('-n', dest='limit', metavar='N', type=int, help='output top N lines')
     parser.add_argument('-x', dest='stopwords', metavar='<path>', help='stopwords file')
+    parser.add_argument('-v', dest='verbs', metavar='<path>', help='verbs file')
     args = parser.parse_args(args)
+
+    global verbs
+    verbs = {}
+    if args.verbs:
+        with open(args.verbs, encoding='utf8') as f:
+            for line in f:
+                verb, _, words = line.strip().partition(' -> ')
+                for w in words.split(','):
+                    verbs[w.lower()] = verb.lower()
+
     if args.function == 'letter':
         for path in args.paths:
             yield from letter(path)

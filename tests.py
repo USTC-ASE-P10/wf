@@ -255,5 +255,36 @@ class TestPhraseOccurrences(unittest.TestCase):
         self.assertEqual(output, expect)
 
 
+class TestVerbs(unittest.TestCase):
+    @staticmethod
+    def __run(*files):
+        tempfiles = []
+        for file in files:
+            tempfile = NamedTemporaryFile('w', delete=False, encoding='utf8')
+            tempfile.write(file)
+            tempfile.flush()
+            tempfiles.append(tempfile)
+        output = ''.join(main(['-f', '-v'] + [tempfile.name for tempfile in tempfiles]))
+        for tempfile in tempfiles:
+            output = output.replace(tempfile.name, '#')
+            tempfile.close()
+        return output
+
+    @staticmethod
+    def __format(data):
+        return 'File: #\n' + ''.join('%40s\t%d\n' % i for i in data) + '\n'
+
+    def test_file(self):
+        output = self.__run('', '1', 'a', 'a b')
+        expect = self.__format([]) + self.__format([('a', 1)]) + self.__format([('a', 1), ('b', 1)])
+        self.assertEqual(output, expect)
+        output = self.__run('aa -> aaa,a', '1', 'a', 'a b')
+        expect = self.__format([]) + self.__format([('aa', 1)]) + self.__format([('aa', 1), ('b', 1)])
+        self.assertEqual(output, expect)
+        output = self.__run('b -> a', '1', 'a', 'a b')
+        expect = self.__format([]) + self.__format([('b', 1)]) + self.__format([('b', 2)])
+        self.assertEqual(output, expect)
+
+
 if __name__ == '__main__':
     unittest.main()
