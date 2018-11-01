@@ -9,13 +9,10 @@ from collections import defaultdict
 def letter(path):
     counts = defaultdict(lambda: 0)
     with open(path, encoding='utf8') as f:
-        while True:
-            c = f.read(1)
-            if not c:
-                break
+        for c in f.read().lower():
             if not c.isalpha():
                 continue
-            counts[c.lower()] += 1
+            counts[c] += 1
     yield 'File: %s\n' % path
     result = sorted(counts.items(), key=lambda i: (-i[1], i[0]))
     if limit is not None:
